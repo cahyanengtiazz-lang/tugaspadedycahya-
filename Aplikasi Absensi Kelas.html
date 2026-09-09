@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Absensi Kelas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white p-2 rounded-lg font-bold text-xl flex items-center justify-center w-10 h-10 shadow">
+                    📋
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">AbsensiKelas Pro</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Sistem Pencatatan Kehadiran Siswa</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <div id="clockDisplay" class="text-xs sm:text-sm font-medium bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hidden sm:block">
+                    <!-- JS Clock -->
+                </div>
+                <button id="themeToggleBtn" onclick="toggleDarkMode()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                    🌙
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Container Utama -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-slate-200 dark:border-slate-700 mb-6 space-x-2 no-print overflow-x-auto">
+            <button onclick="switchTab('absensi')" id="tab-absensi" class="tab-btn px-4 py-2.5 font-medium text-sm border-b-2 border-brand-600 text-brand-600 flex items-center gap-2 whitespace-nowrap">
+                <span>📝</span> Absensi Hari Ini
+            </button>
+            <button onclick="switchTab('siswa')" id="tab-siswa" class="tab-btn px-4 py-2.5 font-medium text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 flex items-center gap-2 whitespace-nowrap">
+                <span>👥</span> Kelola Data Siswa
+            </button>
+            <button onclick="switchTab('rekap')" id="tab-rekap" class="tab-btn px-4 py-2.5 font-medium text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 flex items-center gap-2 whitespace-nowrap">
+                <span>📊</span> Rekap & Laporan
+            </button>
+        </div>
+
+        <!-- TAB 1: ABSENSI HARI INI -->
+        <section id="content-absensi" class="tab-content block">
+            <!-- Filter & Controls -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 flex flex-wrap gap-4 items-center justify-between no-print shadow-sm">
+                <div class="flex flex-wrap gap-3 items-center w-full md:w-auto">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Kelas</label>
+                        <select id="attendanceClassFilter" onchange="renderAttendanceTable()" class="bg-slate-50 border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-slate-800 dark:text-slate-100 text-sm rounded-lg p-2.5 min-w-[140px]">
+                            <option value="XII MIPA 1">XII MIPA 1</option>
+                            <option value="XII MIPA 2">XII MIPA 2</option>
+                            <option value="XII IPS 1">XII IPS 1</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Tanggal</label>
+                        <input type="date" id="attendanceDate" onchange="renderAttendanceTable()" class="bg-slate-50 border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-slate-800 dark:text-slate-100 text-sm rounded-lg p-2.5">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <button onclick="markAllStatus('Hadir')" class="px-3 py-2 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold rounded-lg hover:bg-emerald-200 transition">
+                        ✓ Set Semua Hadir
+                    </button>
+                    <button onclick="saveAttendance()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg shadow-sm transition flex items-center gap-1.5">
+                        💾 Simpan Absensi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 no-print">
+                <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 p-3.5 rounded-xl text-center">
+                    <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Hadir</span>
+                    <p id="statHadir" class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">0</p>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-3.5 rounded-xl text-center">
+                    <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Sakit</span>
+                    <p id="statSakit" class="text-2xl font-bold text-amber-700 dark:text-amber-300">0</p>
+                </div>
+                <div class="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/50 p-3.5 rounded-xl text-center">
+                    <span class="text-xs text-sky-600 dark:text-sky-400 font-medium">Izin</span>
+                    <p id="statIzin" class="text-2xl font-bold text-sky-700 dark:text-sky-300">0</p>
+                </div>
+                <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 p-3.5 rounded-xl text-center">
+                    <span class="text-xs text-rose-600 dark:text-rose-400 font-medium">Alpa</span>
+                    <p id="statAlpa" class="text-2xl font-bold text-rose-700 dark:text-rose-300">0</p>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/50 p-3.5 rounded-xl text-center col-span-2 sm:col-span-1">
+                    <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">Terlambat</span>
+                    <p id="statTerlambat" class="text-2xl font-bold text-purple-700 dark:text-purple-300">0</p>
+                </div>
+            </div>
+
+            <!-- Tabel Presensi -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 w-12 text-center">No</th>
+                                <th class="px-4 py-3 w-28">NIS</th>
+                                <th class="px-4 py-3">Nama Siswa</th>
+                                <th class="px-4 py-3 text-center min-w-[320px]">Status Kehadiran</th>
+                                <th class="px-4 py-3">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Rows loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: KELOLA SISWA -->
+        <section id="content-siswa" class="tab-content hidden">
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Form Tambah/Edit Siswa -->
+                <div class="w-full md:w-1/3 bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm h-fit">
+                    <h2 id="studentFormTitle" class="font-bold text-base mb-4 text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <span>➕</span> Tambah Siswa Baru
+                    </h2>
+                    <form id="studentForm" onsubmit="handleSaveStudent(event)" class="space-y-4">
+                        <input type="hidden" id="studentEditId">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">NIS / NIM</label>
+                            <input type="text" id="studentNis" required placeholder="Contoh: 102030" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
+                            <input type="text" id="studentName" required placeholder="Contoh: Ahmad Hidayat" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Kelas</label>
+                            <select id="studentClass" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+                                <option value="XII MIPA 1">XII MIPA 1</option>
+                                <option value="XII MIPA 2">XII MIPA 2</option>
+                                <option value="XII IPS 1">XII IPS 1</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Jenis Kelamin</label>
+                            <select id="studentGender" required class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                                Simpan Data
+                            </button>
+                            <button type="button" onclick="resetStudentForm()" class="px-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium py-2.5 rounded-lg text-sm hover:bg-slate-300 transition">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- List Siswa -->
+                <div class="w-full md:w-2/3 bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex flex-wrap gap-3 justify-between items-center mb-4">
+                        <h2 class="font-bold text-base text-slate-800 dark:text-slate-100">Daftar Siswa</h2>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="searchStudentInput" onkeyup="renderStudentDirectory()" placeholder="Cari nama/NIS..." class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-sm rounded-lg px-3 py-1.5">
+                            <select id="directoryClassFilter" onchange="renderStudentDirectory()" class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-sm rounded-lg px-3 py-1.5">
+                                <option value="ALL">Semua Kelas</option>
+                                <option value="XII MIPA 1">XII MIPA 1</option>
+                                <option value="XII MIPA 2">XII MIPA 2</option>
+                                <option value="XII IPS 1">XII IPS 1</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-3 py-2.5">NIS</th>
+                                    <th class="px-3 py-2.5">Nama Siswa</th>
+                                    <th class="px-3 py-2.5">Kelas</th>
+                                    <th class="px-3 py-2.5 text-center">L/P</th>
+                                    <th class="px-3 py-2.5 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentDirectoryBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: REKAP & LAPORAN -->
+        <section id="content-rekap" class="tab-content hidden">
+            <!-- Rekap Header / Filters -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 flex flex-wrap gap-4 items-center justify-between no-print shadow-sm">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Kelas</label>
+                        <select id="rekapClassFilter" onchange="generateRekapReport()" class="bg-slate-50 border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm rounded-lg p-2.5">
+                            <option value="XII MIPA 1">XII MIPA 1</option>
+                            <option value="XII MIPA 2">XII MIPA 2</option>
+                            <option value="XII IPS 1">XII IPS 1</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Bulan</label>
+                        <input type="month" id="rekapMonth" onchange="generateRekapReport()" class="bg-slate-50 border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-sm rounded-lg p-2.5">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-3.5 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-sm font-semibold rounded-lg transition flex items-center gap-1.5">
+                        🖨️ Cetak Rekap
+                    </button>
+                    <button onclick="exportToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition flex items-center gap-1.5">
+                        📥 Ekspor CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Print Header (Only visible when printing) -->
+            <div class="hidden print-only mb-6 text-center border-b pb-4">
+                <h1 class="text-2xl font-bold">REKAPITULASI PRESENSI SISWA</h1>
+                <p id="printSubtitle" class="text-sm text-slate-600">Kelas: XII MIPA 1 | Periode: Bulan Ini</p>
+            </div>
+
+            <!-- Summary Table -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 text-center w-12">No</th>
+                                <th class="px-4 py-3 w-28">NIS</th>
+                                <th class="px-4 py-3">Nama Siswa</th>
+                                <th class="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400">Hadir</th>
+                                <th class="px-4 py-3 text-center text-amber-600 dark:text-amber-400">Sakit</th>
+                                <th class="px-4 py-3 text-center text-sky-600 dark:text-sky-400">Izin</th>
+                                <th class="px-4 py-3 text-center text-rose-600 dark:text-rose-400">Alpa</th>
+                                <th class="px-4 py-3 text-center text-purple-600 dark:text-purple-400">Terlambat</th>
+                                <th class="px-4 py-3 text-center font-bold">Persentase</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rekapTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm z-50 pointer-events-none">
+        <span id="toastIcon">✅</span>
+        <span id="toastMessage">Pesan notifikasi</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4 text-center text-xs text-slate-500 dark:text-slate-400 no-print mt-auto">
+        Aplikasi Absensi Kelas &copy; 2026 - Data tersimpan otomatis secara lokal di peramban Anda.
+    </footer>
+
+    <script>
+        // Default Mock Data if LocalStorage is empty
+        const defaultStudents = [
+            { id: "S1", nis: "10201", name: "Ahmad Fauzi", class: "XII MIPA 1", gender: "L" },
+            { id: "S2", nis: "10202", name: "Anisa Rahmawati", class: "XII MIPA 1", gender: "P" },
+            { id: "S3", nis: "10203", name: "Budi Santoso", class: "XII MIPA 1", gender: "L" },
+            { id: "S4", nis: "10204", name: "Citra Dewi", class: "XII MIPA 1", gender: "P" },
+            { id: "S5", nis: "10205", name: "Doni Pratama", class: "XII MIPA 1", gender: "L" },
+            { id: "S6", nis: "10206", name: "Eka Putri", class: "XII MIPA 2", gender: "P" },
+            { id: "S7", nis: "10207", name: "Farhan Hidayat", class: "XII MIPA 2", gender: "L" },
+            { id: "S8", nis: "10208", name: "Gita Gutawa", class: "XII IPS 1", gender: "P" }
+        ];
+
+        // State Variables
+        let students = JSON.parse(localStorage.getItem("absensi_students")) || defaultStudents;
+        let records = JSON.parse(localStorage.getItem("absensi_records")) || {};
+
+        window.onload = function() {
+            // Set current date input default to today (YYYY-MM-DD)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = today;
+            document.getElementById('rekapMonth').value = today.substring(0, 7);
+
+            // Clock update
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Initial Renders
+            renderAttendanceTable();
+            renderStudentDirectory();
+            generateRekapReport();
+        };
+
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('clockDisplay').innerText = now.toLocaleDateString('id-ID', options);
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brand-600', 'text-brand-600');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabName);
+            activeBtn.classList.add('border-brand-600', 'text-brand-600');
+            activeBtn.classList.remove('border-transparent', 'text-slate-500');
+
+            if (tabName === 'rekap') generateRekapReport();
+            if (tabName === 'siswa') renderStudentDirectory();
+        }
+
+        function getAttendanceKey(date, className) {
+            return `${date}_${className}`;
+        }
+
+        function renderAttendanceTable() {
+            const date = document.getElementById('attendanceDate').value;
+            const className = document.getElementById('attendanceClassFilter').value;
+            const key = getAttendanceKey(date, className);
+
+            const filteredStudents = students.filter(s => s.class === className);
+            const currentRecord = records[key] || {};
+
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Tidak ada siswa terdaftar di kelas ini.</td></tr>`;
+                updateStats({});
+                return;
+            }
+
+            const currentStatuses = {};
+
+            filteredStudents.forEach((student, index) => {
+                const studentData = currentRecord[student.id] || { status: 'Hadir', note: '' };
+                currentStatuses[student.id] = studentData.status;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-center font-medium text-slate-500">${index + 1}</td>
+                    <td class="px-4 py-3 font-mono text-xs">${student.nis}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">${student.name}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="inline-flex rounded-lg p-1 bg-slate-100 dark:bg-slate-700 space-x-1 text-xs font-semibold">
+                            ${['Hadir', 'Sakit', 'Izin', 'Alpa', 'Terlambat'].map(st => {
+                                const active = studentData.status === st;
+                                let activeClass = '';
+                                if (active) {
+                                    if (st === 'Hadir') activeClass = 'bg-emerald-500 text-white shadow';
+                                    if (st === 'Sakit') activeClass = 'bg-amber-500 text-white shadow';
+                                    if (st === 'Izin') activeClass = 'bg-sky-500 text-white shadow';
+                                    if (st === 'Alpa') activeClass = 'bg-rose-500 text-white shadow';
+                                    if (st === 'Terlambat') activeClass = 'bg-purple-500 text-white shadow';
+                                } else {
+                                    activeClass = 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600';
+                                }
+                                return `<button type="button" onclick="changeStatus('${student.id}', '${st}')" class="px-2.5 py-1 rounded-md transition ${activeClass}">${st}</button>`;
+                            }).join('')}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <input type="text" value="${studentData.note || ''}" onchange="changeNote('${student.id}', this.value)" placeholder="Keterangan (opsional)..." class="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded px-2.5 py-1 text-xs">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateStats(currentRecord, filteredStudents);
+        }
+
+        function changeStatus(studentId, newStatus) {
+            const date = document.getElementById('attendanceDate').value;
+            const className = document.getElementById('attendanceClassFilter').value;
+            const key = getAttendanceKey(date, className);
+
+            if (!records[key]) records[key] = {};
+            if (!records[key][studentId]) records[key][studentId] = { status: 'Hadir', note: '' };
+
+            records[key][studentId].status = newStatus;
+            renderAttendanceTable();
+        }
+
+        function changeNote(studentId, noteValue) {
+            const date = document.getElementById('attendanceDate').value;
+            const className = document.getElementById('attendanceClassFilter').value;
+            const key = getAttendanceKey(date, className);
+
+            if (!records[key]) records[key] = {};
+            if (!records[key][studentId]) records[key][studentId] = { status: 'Hadir', note: '' };
+
+            records[key][studentId].note = noteValue;
+        }
+
+        function markAllStatus(status) {
+            const date = document.getElementById('attendanceDate').value;
+            const className = document.getElementById('attendanceClassFilter').value;
+            const key = getAttendanceKey(date, className);
+
+            const filteredStudents = students.filter(s => s.class === className);
+            if (!records[key]) records[key] = {};
+
+            filteredStudents.forEach(s => {
+                if (!records[key][s.id]) records[key][s.id] = { status: status, note: '' };
+                else records[key][s.id].status = status;
+            });
+
+            renderAttendanceTable();
+            showToast(`Semua siswa ditandai ${status}`);
+        }
+
+        function updateStats(currentRecord, filteredStudents = []) {
+            let h = 0, s = 0, i = 0, a = 0, t = 0;
+
+            filteredStudents.forEach(student => {
+                const status = currentRecord[student.id]?.status || 'Hadir';
+                if (status === 'Hadir') h++;
+                if (status === 'Sakit') s++;
+                if (status === 'Izin') i++;
+                if (status === 'Alpa') a++;
+                if (status === 'Terlambat') t++;
+            });
+
+            document.getElementById('statHadir').innerText = h;
+            document.getElementById('statSakit').innerText = s;
+            document.getElementById('statIzin').innerText = i;
+            document.getElementById('statAlpa').innerText = a;
+            document.getElementById('statTerlambat').innerText = t;
+        }
+
+        function saveAttendance() {
+            localStorage.setItem("absensi_records", JSON.stringify(records));
+            showToast("Absensi berhasil disimpan!");
+        }
+
+        function renderStudentDirectory() {
+            const classFilter = document.getElementById('directoryClassFilter').value;
+            const searchQuery = document.getElementById('searchStudentInput').value.toLowerCase();
+
+            const tbody = document.getElementById('studentDirectoryBody');
+            tbody.innerHTML = '';
+
+            const filtered = students.filter(s => {
+                const matchClass = classFilter === 'ALL' || s.class === classFilter;
+                const matchSearch = s.name.toLowerCase().includes(searchQuery) || s.nis.toLowerCase().includes(searchQuery);
+                return matchClass && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Tidak ada data siswa.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition";
+                tr.innerHTML = `
+                    <td class="px-3 py-2.5 font-mono text-xs">${student.nis}</td>
+                    <td class="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200">${student.name}</td>
+                    <td class="px-3 py-2.5">${student.class}</td>
+                    <td class="px-3 py-2.5 text-center">${student.gender}</td>
+                    <td class="px-3 py-2.5 text-center space-x-1">
+                        <button onclick="editStudent('${student.id}')" class="px-2 py-1 text-xs bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 rounded hover:bg-sky-200 transition">Edit</button>
+                        <button onclick="deleteStudent('${student.id}')" class="px-2 py-1 text-xs bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 rounded hover:bg-rose-200 transition">Hapus</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSaveStudent(e) {
+            e.preventDefault();
+            const editId = document.getElementById('studentEditId').value;
+            const nis = document.getElementById('studentNis').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            const studentClass = document.getElementById('studentClass').value;
+            const gender = document.getElementById('studentGender').value;
+
+            if (editId) {
+                const idx = students.findIndex(s => s.id === editId);
+                if (idx !== -1) {
+                    students[idx] = { id: editId, nis, name, class: studentClass, gender };
+                    showToast("Data siswa diperbarui.");
+                }
+            } else {
+                const newStudent = {
+                    id: "S_" + Date.now(),
+                    nis,
+                    name,
+                    class: studentClass,
+                    gender
+                };
+                students.push(newStudent);
+                showToast("Siswa baru berhasil ditambahkan.");
+            }
+
+            localStorage.setItem("absensi_students", JSON.stringify(students));
+            resetStudentForm();
+            renderStudentDirectory();
+            renderAttendanceTable();
+        }
+
+        function editStudent(id) {
+            const student = students.find(s => s.id === id);
+            if (!student) return;
+
+            document.getElementById('studentEditId').value = student.id;
+            document.getElementById('studentNis').value = student.nis;
+            document.getElementById('studentName').value = student.name;
+            document.getElementById('studentClass').value = student.class;
+            document.getElementById('studentGender').value = student.gender;
+
+            document.getElementById('studentFormTitle').innerHTML = `<span>✏️</span> Edit Data Siswa`;
+        }
+
+        function deleteStudent(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus siswa ini?")) {
+                students = students.filter(s => s.id !== id);
+                localStorage.setItem("absensi_students", JSON.stringify(students));
+                renderStudentDirectory();
+                renderAttendanceTable();
+                showToast("Siswa dihapus.");
+            }
+        }
+
+        function resetStudentForm() {
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentEditId').value = '';
+            document.getElementById('studentFormTitle').innerHTML = `<span>➕</span> Tambah Siswa Baru`;
+        }
+
+        function generateRekapReport() {
+            const className = document.getElementById('rekapClassFilter').value;
+            const monthYear = document.getElementById('rekapMonth').value; // YYYY-MM
+
+            document.getElementById('printSubtitle').innerText = `Kelas: ${className} | Periode: ${monthYear}`;
+
+            const filteredStudents = students.filter(s => s.class === className);
+            const tbody = document.getElementById('rekapTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400">Tidak ada siswa di kelas ini.</td></tr>`;
+                return;
+            }
+
+            // Find all recorded keys matching the month & class
+            const relevantKeys = Object.keys(records).filter(key => key.startsWith(monthYear) && key.endsWith(`_${className}`));
+
+            filteredStudents.forEach((student, idx) => {
+                let h = 0, s = 0, i = 0, a = 0, t = 0;
+
+                relevantKeys.forEach(key => {
+                    const rec = records[key][student.id];
+                    if (rec) {
+                        if (rec.status === 'Hadir') h++;
+                        if (rec.status === 'Sakit') s++;
+                        if (rec.status === 'Izin') i++;
+                        if (rec.status === 'Alpa') a++;
+                        if (rec.status === 'Terlambat') t++;
+                    }
+                });
+
+                const totalRecordedDays = relevantKeys.length;
+                const totalPresence = h + t; // Hadir + Terlambat dianggap hadir
+                const percentage = totalRecordedDays > 0 ? Math.round((totalPresence / totalRecordedDays) * 100) : 100;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/30 transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-center text-slate-500">${idx + 1}</td>
+                    <td class="px-4 py-3 font-mono text-xs">${student.nis}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">${student.name}</td>
+                    <td class="px-4 py-3 text-center font-bold text-emerald-600 dark:text-emerald-400">${h}</td>
+                    <td class="px-4 py-3 text-center font-bold text-amber-600 dark:text-amber-400">${s}</td>
+                    <td class="px-4 py-3 text-center font-bold text-sky-600 dark:text-sky-400">${i}</td>
+                    <td class="px-4 py-3 text-center font-bold text-rose-600 dark:text-rose-400">${a}</td>
+                    <td class="px-4 py-3 text-center font-bold text-purple-600 dark:text-purple-400">${t}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${percentage >= 85 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'}">
+                            ${percentage}%
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportToCSV() {
+            const className = document.getElementById('rekapClassFilter').value;
+            const monthYear = document.getElementById('rekapMonth').value;
+            const filteredStudents = students.filter(s => s.class === className);
+            const relevantKeys = Object.keys(records).filter(key => key.startsWith(monthYear) && key.endsWith(`_${className}`));
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,NIS,Nama Siswa,Kelas,Hadir,Sakit,Izin,Alpa,Terlambat,Persentase Kehadiran\n";
+
+            filteredStudents.forEach((student, idx) => {
+                let h = 0, s = 0, i = 0, a = 0, t = 0;
+                relevantKeys.forEach(key => {
+                    const rec = records[key][student.id];
+                    if (rec) {
+                        if (rec.status === 'Hadir') h++;
+                        if (rec.status === 'Sakit') s++;
+                        if (rec.status === 'Izin') i++;
+                        if (rec.status === 'Alpa') a++;
+                        if (rec.status === 'Terlambat') t++;
+                    }
+                });
+
+                const totalRecordedDays = relevantKeys.length;
+                const totalPresence = h + t;
+                const percentage = totalRecordedDays > 0 ? Math.round((totalPresence / totalRecordedDays) * 100) : 100;
+
+                csvContent += `${idx + 1},"${student.nis}","${student.name}","${student.class}",${h},${s},${i},${a},${t},${percentage}%\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Absensi_${className.replace(/\s+/g, '_')}_${monthYear}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
